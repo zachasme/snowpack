@@ -276,7 +276,7 @@ export async function install(
   for (const filePath of PACKAGES_TO_AUTO_DETECT_EXPORTS) {
     knownNamedExports[filePath] = knownNamedExports[filePath] || detectExports(filePath) || [];
   }
-  if (source === 'local' && !fs.existsSync(path.join(cwd, 'node_modules'))) {
+  if (source === 'local' && !fs.existsSync(path.join(cwd, 'node_modules')) && !process.versions.pnp) {
     logError('no "node_modules" directory exists. Did you run "npm install" first?');
     return;
   }
