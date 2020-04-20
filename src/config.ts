@@ -16,6 +16,9 @@ type DeepPartial<T> = {
 
 export type EnvVarReplacements = Record<string, string | number | true>;
 
+export type DevScript = {cmd: string; watch: string | undefined};
+export type DevScripts = {[id: string]: DevScript};
+
 // interface this library uses internally
 export interface SnowpackConfig {
   source: 'local' | 'pika';
@@ -23,6 +26,8 @@ export interface SnowpackConfig {
   entrypoints?: string[];
   dedupe?: string[];
   namedExports?: {[filepath: string]: string[]};
+  dev: {dist: string; fallback?: string};
+  scripts: DevScripts;
   installOptions: {
     babel?: boolean;
     clean: boolean;
@@ -70,6 +75,9 @@ const DEFAULT_CONFIG: Partial<SnowpackConfig> = {
     stat: false,
     strict: false,
     env: {},
+  },
+  dev: {
+    dist: '.',
   },
   rollup: {plugins: []},
 };
@@ -123,6 +131,17 @@ const configSchema = {
         },
       },
     },
+    dev: {
+      type: 'object',
+      properties: {
+        dist: {type: 'string'},
+        fallback: {type: 'string'},
+      },
+    },
+    scripts: {
+      type: 'object',
+      additionalProperties: {type: ['string']},
+    },
     rollup: {
       type: 'object',
       properties: {
@@ -163,6 +182,22 @@ function normalizeConfig(config: SnowpackConfig): SnowpackConfig {
   if (!config.source) {
     const isDetailedObject = config.webDependencies && typeof config.webDependencies === 'object';
     config.source = isDetailedObject ? 'pika' : 'local';
+  }
+  if (config.scripts) {
+    for (const scriptId of Object.keys(config.scripts)) {
+      if (scriptId.includes('::')) {
+        continue;
+      }
+      config.scripts[scriptId] = {
+        cmd: (config.scripts[scriptId] as any) as string,
+        watch: (config.scripts[`${scriptId}::watch`] as any) as string | undefined,
+      };
+    }
+    for (const scriptId of Object.keys(config.scripts)) {
+      if (scriptId.includes('::')) {
+        delete config.scripts[scriptId];
+      }
+    }
   }
   return config;
 }
